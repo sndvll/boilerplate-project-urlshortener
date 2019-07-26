@@ -58,12 +58,11 @@ app.post('/api/shorturl/new', (req, res) => {
       Url.findOne({original: url}, (err, result) => {
         if(err) {
           res.json(errors.general);
-          
         } else if (result) {
           res.json({original_url: url, short_url: `${appUrl}/link/${result.route}`})
         } else {
           //CREATE AND PERSIST HERE!
-          res.json({original_url: url, short_url: `${appUrl}/link/${result.route}`});
+          res.json({original_url: url, short_url: `${appUrl}/link/1`});
         }
       });
     }
