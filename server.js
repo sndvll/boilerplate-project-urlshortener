@@ -31,13 +31,14 @@ const Url = mongoose.model('Url', urlSchema);
 // constants
 const URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/;
 const errors = {
-  invalidUrl: {error: 'invalid URL'},
-  invalidHost: {error: 'invalid Hostname'},
-  general: {error: 'Something wnt south...'}
+  invalidUrl: { error: 'invalid URL' },
+  invalidHost: { error: 'invalid Hostname' },
+  general: { error: 'Something wnt south...' }
 };
 
 
 // handlers
+/* POST */
 const postHandler = (req, res) => {
   const url = req.body.url;
   if(!url.match(URL_REGEX)) {
@@ -49,7 +50,8 @@ const postHandler = (req, res) => {
     if (err) {
       handleError(res, errors.invalidHost);
     } else {
-      Url.findOne({original: url}, (err, result) => {
+      Url.findOne({original_url: url}, (err, result) => {
+        console.log(result);
         if(err) {
           handleError(res, errors.general);
         } else if (result) {
@@ -61,19 +63,27 @@ const postHandler = (req, res) => {
     }
   });
 }
-
 const handleCreation = (res, url) => {
-  Url.count({}, (err, count) => {
+  Url.countDocuments({}, (err, count) => {
     if(err) {
       handleError(res, errors.general);
+    } else {
+      const newUrl = { original_url: url, route: count+1 };
+      Url.create(newUrl, (err, result) => {
+        if (err) handleError(res, errors.general);
+        else {
+          res.json({original_url: url, short_url: `${appUrl}/link/${result.route}`});
+        }
+      })
     }
-    console.log(count);
   });
-  res.json({original_url: url, short_url: `${appUrl}/link/1`});
 }
-
 const handleError = (res, err) => res.json(err);
 const handleIfFound = (res, url, result) => res.json({original_url: url, short_url: `${appUrl}/link/${result.route}`});
+/* GET */
+const getHandler = (req, res) => {
+  
+};
 
 
 // routes
