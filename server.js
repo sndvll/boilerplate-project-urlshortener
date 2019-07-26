@@ -49,25 +49,37 @@ app.post('/api/shorturl/new', (req, res) => {
   const url = req.body.url;
   if(!url.match(URL_REGEX)) {
     res.json(errors.invalidUrl);
+    return;
   }
   const stripedUrl = url.replace(/^https?:\/\//, '');
   dns.lookup(stripedUrl, (err) => {
     if (err) {
       res.json(errors.invalidHost);
+      return;
     } else {
       Url.findOne({original: url}, (err, result) => {
         if(err) {
-          res.json(errors.general);
+          res.json(errors.general); 
+          handleError();
+          return;
         } else if (result) {
           res.json({original_url: url, short_url: `${appUrl}/link/${result.route}`})
+          return;
         } else {
-          //CREATE AND PERSIST HERE!
+          Url.count({}, (err, count) => {
+            if(err) res.json(errors.general); return;
+            console.log(count);
+          });
           res.json({original_url: url, short_url: `${appUrl}/link/1`});
         }
       });
     }
   });
 });
+
+const handleError = (res, err) => {
+  res.json(err);
+}
 
 
 app.listen(port, function () {
