@@ -33,11 +33,13 @@ const URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0
 const errors = {
   invalidUrl: { error: 'invalid URL' },
   invalidHost: { error: 'invalid Hostname' },
-  general: { error: 'Something wnt south...' }
+  general: { error: 'Something wnt south...' },
+  notFound: {error: 'No short url found for given input'}
 };
 
 
 // handlers
+const handleError = (res, err) => res.json(err);
 /* POST */
 const postHandler = (req, res) => {
   const url = req.body.url;
@@ -78,16 +80,22 @@ const handleCreation = (res, url) => {
     }
   });
 }
-const handleError = (res, err) => res.json(err);
 const handleIfFound = (res, url, result) => res.json({original_url: url, short_url: `${appUrl}/link/${result.route}`});
 /* GET */
 const getHandler = (req, res) => {
-  
+  const { route } = req.params;
+  Url.findOne({route}, (err, result) => {
+    if(err) handleError(res, errors.notFound);
+    else {
+      res.redirect(result.original_url);
+    }
+  });
 };
 
 
 // routes
 app.get('/',(req, res) => res.sendFile(process.cwd() + '/views/index.html'));
+app.get('/link/:route', getHandler);
 app.post('/api/shorturl/new', postHandler);
 
 app.listen(port, function () {
