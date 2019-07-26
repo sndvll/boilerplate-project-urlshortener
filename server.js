@@ -12,13 +12,11 @@ const dns = require('dns');
 const port = process.env.PORT || 3000;
 const appUrl = process.env.APP_URL || 'http://localhost:' + port;
 mongoose.connect(process.env.MONGO_URI +'/test?retryWrites=true&w=majority', { useNewUrlParser: true }).catch(err => console.log(err));
-/** this project needs a db !! **/ 
-// mongoose.connect(process.env.MONGOLAB_URI);
 
+// Middleware
 app.use(cors());
 app.use(bodyParser.urlencoded({extended: false}));
-/** this project needs to parse POST bodies **/
-// you should mount the body-parser here
+app.use('/public', express.static(process.cwd() + '/public'));
 
 // Mongo stuff
 const urlSchema = mongoose.Schema({
@@ -38,49 +36,49 @@ const errors = {
   general: {error: 'Something wnt south...'}
 };
 
-// routes
-app.use('/public', express.static(process.cwd() + '/public'));
 
-app.get('/', function(req, res){
-  res.sendFile(process.cwd() + '/views/index.html');
-});
-
-app.post('/api/shorturl/new', (req, res) => {
+// handlers
+const postHandler = (req, res) => {
   const url = req.body.url;
   if(!url.match(URL_REGEX)) {
-    res.json(errors.invalidUrl);
+    handleError(res, errors.invalidUrl);
     return;
   }
   const stripedUrl = url.replace(/^https?:\/\//, '');
   dns.lookup(stripedUrl, (err) => {
     if (err) {
-      res.json(errors.invalidHost);
-      return;
+      handleError(res, errors.invalidHost);
     } else {
       Url.findOne({original: url}, (err, result) => {
         if(err) {
-          res.json(errors.general); 
-          handleError();
-          return;
+          handleError(res, errors.general);
         } else if (result) {
-          res.json({original_url: url, short_url: `${appUrl}/link/${result.route}`})
-          return;
+          handleIfFound(res, url, result);
         } else {
-          Url.count({}, (err, count) => {
-            if(err) res.json(errors.general); return;
-            console.log(count);
-          });
-          res.json({original_url: url, short_url: `${appUrl}/link/1`});
+          handleCreation(res, url)
         }
       });
     }
   });
-});
-
-const handleError = (res, err) => {
-  res.json(err);
 }
 
+const handleCreation = (res, url) => {
+  Url.count({}, (err, count) => {
+    if(err) {
+      handleError(res, errors.general);
+    }
+    console.log(count);
+  });
+  res.json({original_url: url, short_url: `${appUrl}/link/1`});
+}
+
+const handleError = (res, err) => res.json(err);
+const handleIfFound = (res, url, result) => res.json({original_url: url, short_url: `${appUrl}/link/${result.route}`});
+
+
+// routes
+app.get('/',(req, res) => res.sendFile(process.cwd() + '/views/index.html'));
+app.post('/api/shorturl/new', postHandler);
 
 app.listen(port, function () {
   console.log('Node.js listening on port: ' + port);
